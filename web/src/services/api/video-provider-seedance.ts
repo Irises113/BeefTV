@@ -213,6 +213,6 @@ async function resolveSeedanceVideosMediaUrl(media: ReferenceVideo | ReferenceAu
 }
 
 function seedanceErrorMessage(state: SeedanceTask) {
-    if (state.error?.message && state.error.code) return `${state.error.code}：${state.error.message}`;
+    if (state.error?.code) return JSON.stringify({ error: { code: state.error.code, message: state.error.message || "" } });
     return state.error?.message || state.error_code || "";
 }

@@ -5,6 +5,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -770,8 +771,11 @@ func seedanceErrorMessage(state map[string]interface{}) string {
 	if errorValue, ok := state["error"].(map[string]interface{}); ok {
 		message := stringField(errorValue, "message")
 		code := stringField(errorValue, "code")
-		if message != "" && code != "" {
-			return code + "：" + message
+		if code != "" {
+			// Preserve the provider code across polling and persisted task errors.
+			// Flattening it into prose lets ambiguous message keywords override it.
+			payload, _ := json.Marshal(map[string]interface{}{"error": map[string]string{"code": code, "message": message}})
+			return string(payload)
 		}
 		if message != "" {
 			return message
