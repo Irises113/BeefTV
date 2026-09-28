@@ -2,7 +2,7 @@ import type { CanvasProject } from "@/stores/canvas/use-canvas-store";
 import type { CanvasConnection, CanvasNodeData } from "@/types/canvas";
 
 type Change<T> = { before: T | null; after: T | null };
-export type AgentCanvasPatch = {
+export type CanvasPatch = {
     canvasId: string;
     baseRevision?: number;
     revision?: number;
@@ -56,7 +56,7 @@ function mergeItems<T extends { id: string }>(items: T[], changes: Change<T>[]):
     return result.length === items.length && result.every((item, index) => item === items[index]) ? items : result;
 }
 
-export function applyAgentCanvasPatch(project: CanvasProject, patch: AgentCanvasPatch): CanvasProject {
+export function applyCanvasPatch(project: CanvasProject, patch: CanvasPatch): CanvasProject {
     if (patch.canvasId !== project.id || !Array.isArray(patch.nodes) || !Array.isArray(patch.connections)) throw new Error("画布增量不属于当前画布或格式无效");
     const byId = new Map(project.nodes.map((node) => [node.id, node]));
     const nodeChanges = patch.nodes.map((change) => {
@@ -83,7 +83,7 @@ export function applyAgentCanvasPatch(project: CanvasProject, patch: AgentCanvas
     return { ...project, nodes, connections, updatedAt: patch.updatedAt || project.updatedAt };
 }
 
-export function mergeAgentCanvasEditor(previous: CanvasProject, incoming: CanvasProject, nodes: CanvasNodeData[], connections: CanvasConnection[]) {
+export function mergeCanvasRefreshPatch(previous: CanvasProject, incoming: CanvasProject, nodes: CanvasNodeData[], connections: CanvasConnection[]) {
     const changes = <T extends { id: string }>(before: T[], after: T[]): Change<T>[] => {
         const byId = new Map(before.map((item) => [item.id, item]));
         const afterIds = new Set(after.map((item) => item.id));
@@ -92,7 +92,7 @@ export function mergeAgentCanvasEditor(previous: CanvasProject, incoming: Canvas
             ...before.filter((item) => !afterIds.has(item.id)).map((item) => ({ before: item, after: null })),
         ];
     };
-    return applyAgentCanvasPatch({ ...previous, nodes, connections }, {
+    return applyCanvasPatch({ ...previous, nodes, connections }, {
         canvasId: previous.id,
         updatedAt: incoming.updatedAt,
         nodes: changes(previous.nodes, incoming.nodes),

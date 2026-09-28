@@ -52,7 +52,7 @@ import { getMediaBlob, uploadMediaFile } from "@/services/file-storage";
 import { resolveImageUrl, uploadImage } from "@/services/image-storage";
 import { ensureCanvasNodeAsset } from "@/services/project-asset-sync";
 import { isLocalWorkspaceMode } from "@/services/workspace-mode";
-import { syncLocalCanvasSnapshotForAgent } from "@/services/local-workspace-sync";
+import { syncLocalCanvasSnapshot } from "@/services/local-workspace-sync";
 import { openLocalCanvasProjectFromBackend } from "@/services/local-workspace-repository";
 import { http } from "@/services/api/request";
 import { flushCanvasStorePersistence, useCanvasStore } from "@/stores/canvas/use-canvas-store";
@@ -211,7 +211,7 @@ export function useCanvasMediaTools({
             try {
                 await flushCanvasStorePersistence();
                 if (isLocalWorkspaceMode()) {
-                    await syncLocalCanvasSnapshotForAgent(projectId, { nodes: [...latestNodes.values()], connections: [...latestConnections.values()] });
+                    await syncLocalCanvasSnapshot(projectId, { nodes: [...latestNodes.values()], connections: [...latestConnections.values()] });
                     const { project: saved } = await http.get<{ project: { nodes: CanvasNodeData[] } }>(`/canvas-projects/${encodeURIComponent(projectId)}`);
                     if (!saved || mediaNodes.some((node) => !saved.nodes.some((savedNode) => savedNode.id === node.id))) {
                         throw new Error("本地项目库回读校验未包含刚生成的媒体节点");
