@@ -186,6 +186,9 @@ func (w *taskWorkerCoordinator) processClaimedTask(task *model.Task, globalSlot 
 	if task.Type == model.TaskTypeTimelineRender {
 		return w.processTimelineRender(task, ctx)
 	}
+	if task.Type == model.TaskTypeDepthCapture {
+		return w.processDepthCapture(task, ctx)
+	}
 
 	s.markAgentMemoryCompactRunning(*task)
 	task.Stage = "调用生成模型"
@@ -311,6 +314,9 @@ func taskExecutionTimeoutWithPolicy(taskType string, policy RuntimeTaskPolicy) t
 	case taskType == model.TaskTypeTimelineRender:
 		// 渲染是整条时间线的重编码，耗时随长度线性增长。
 		return 60 * time.Minute
+	case taskType == model.TaskTypeDepthCapture:
+		// 首次执行包含可选 Runtime 和模型下载。
+		return 2 * time.Hour
 	default:
 		return time.Duration(policy.DefaultTimeoutMinutes) * time.Minute
 	}

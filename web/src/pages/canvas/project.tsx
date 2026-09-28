@@ -1243,6 +1243,9 @@ function InfiniteCanvasPage() {
         cropImageNode,
         cropNodeId,
         cropVideoNode,
+        depthCaptureNode,
+        retryDepthCaptureNode,
+        recoverDepthCaptureNodes,
         videoCropNodeId,
         closeFrameDialog,
         extractAudioFromVideo,
@@ -1304,6 +1307,13 @@ function InfiniteCanvasPage() {
         finishGenerationRequest,
         bindGenerationTask,
     });
+
+    useEffect(() => {
+        if (!projectLoaded) return;
+        const controller = new AbortController();
+        recoverDepthCaptureNodes(controller.signal);
+        return () => controller.abort();
+    }, [projectId, projectLoaded, recoverDepthCaptureNodes]);
 
     const handleNodesDeleted = useCallback(
         (removedIds: Set<string>, nextNodes: CanvasNodeData[], removedNodes: CanvasNodeData[]) => {
@@ -2796,6 +2806,10 @@ function InfiniteCanvasPage() {
     );
     const retryCanvasNode = useCallback(
         (node: CanvasNodeData) => {
+            if (node.metadata?.depthSourceNodeId) {
+                void retryDepthCaptureNode(node);
+                return;
+            }
             if (node.type === CanvasNodeType.Script) {
                 const prompt = (node.metadata?.composerContent || node.metadata?.prompt || "").trim();
                 if (!prompt) {
@@ -2822,7 +2836,7 @@ function InfiniteCanvasPage() {
             }
             void handleRetryNode(node);
         },
-        [generateScriptRows, handleRetryNode, message, nodesRef, reconcileImageBatchRootNode, retryImageBatchChildren],
+        [generateScriptRows, handleRetryNode, message, nodesRef, reconcileImageBatchRootNode, retryDepthCaptureNode, retryImageBatchChildren],
     );
     const openCanvasNodeTaskDetails = useCallback(
         (node: CanvasNodeData) => {
@@ -3420,6 +3434,7 @@ function InfiniteCanvasPage() {
                             onExtractAudioFromVideo={(node) => void extractAudioFromVideo(node)}
                             // 视频剪辑使用视频节点下方的内嵌时间轴，不再打开旧的片段重拍弹窗。
                             onTrimVideoSegments={openInlineVideoTrim}
+                            onDepthCapture={(node) => void depthCaptureNode(node)}
                             onSubtitles={(node) => setSubtitleNodeId(node.id)}
                             onTimeline={(node) => node.type === CanvasNodeType.Video ? openInlineVideoTrim(node) : setTimelineNodeId(node.id)}
                             extractingVideoFrames={toolbarNode?.id === extractingVideoFramesNodeId}
