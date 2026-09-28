@@ -700,6 +700,30 @@ func walkProviderFields(payload map[string]any, depth int) extractedFields {
 			fields.Message = firstNonEmpty(fields.Message, "blocked by content safety policy")
 		}
 	}
+	// Gateways may wrap original error JSON inside message. Stay within the
+	// allowlisted error fields and depth bound; keep authoritative outer codes.
+	outerCategory, outerKnown := categoryFromProviderCode(fields.Code, fields.Type, fields.Status)
+	if !outerKnown {
+		for _, value := range []string{fields.Code, fields.Status} {
+			if status, err := strconv.Atoi(value); err == nil {
+				if category, ok := categoryFromHTTPStatus(status); ok {
+					outerCategory, outerKnown = category, true
+					break
+				}
+			}
+		}
+	}
+	if genericProviderCode(fields.Code) && (!outerKnown || outerCategory == CategoryInvalidParams || outerCategory == CategoryUnknown) && strings.HasPrefix(strings.TrimSpace(fields.Message), "{") {
+		var nested map[string]any
+		if json.Unmarshal([]byte(fields.Message), &nested) == nil {
+			child := walkProviderFields(nested, depth+1)
+			if child.Code != "" || child.Message != "" {
+				child.RequestID = firstNonEmpty(fields.RequestID, child.RequestID)
+				child.TaskID = firstNonEmpty(fields.TaskID, child.TaskID)
+				fields = mergeExtracted(child, fields)
+			}
+		}
+	}
 	return fields
 }
 

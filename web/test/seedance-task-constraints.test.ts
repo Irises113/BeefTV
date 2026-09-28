@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { seedanceTaskOptions } from "../src/lib/seedance-task-constraints";
 import { explainGenerationError } from "../src/lib/generation-error";
 import { resolveVideoOperation } from "../src/lib/model-selection";
-import { createSeedanceTask } from "../src/services/api/video-provider-seedance";
+import { createSeedanceTask, pollSeedanceTask } from "../src/services/api/video-provider-seedance";
 import { defaultConfig } from "../src/stores/use-config-store";
 import { videoResponseTools } from "../src/services/api/video-response";
 import type { VideoProviderDeps } from "../src/services/api/video-provider-deps";
@@ -85,4 +85,21 @@ test("explicit reference and extension intent survives model selection", () => {
 test("temporary unavailable error inside failed task is actionable", () => {
  const e=explainGenerationError({error:{code:"model_temporarily_unavailable",message:"无可用线路：当前售价档位 standard 暂无可用线路"}});
  expect(e.category).toBe("provider_unavailable"); expect(e.reason).toBe("模型服务暂时不可用");
+});
+
+
+test("polling preserves unavailable code over ambiguous provider prose", async () => {
+    for (const message of ["无可用线路：当前售价档位 standard 暂无可用线路，线路可能维护中或模型不存在", undefined]) {
+        const deps = {
+            transport: { get: async () => ({ status: "failed", error: { code: "model_temporarily_unavailable", message } }) },
+            response: { ...videoResponseTools, unwrapSeedanceTask: (value: unknown) => value },
+        } as unknown as VideoProviderDeps;
+        const config = { ...defaultConfig, baseUrl: "https://example.com/v1" };
+        const result = await pollSeedanceTask(deps, config as never, { id: "task-failed", provider: "seedance", model: "seedance-2.5" });
+        expect(result.status).toBe("failed");
+        if (result.status !== "failed") throw new Error("expected failed task");
+        const failure = explainGenerationError(result.error);
+        expect(failure.category).toBe("provider_unavailable");
+        expect(explainGenerationError(failure.message).category).toBe("provider_unavailable");
+    }
 });

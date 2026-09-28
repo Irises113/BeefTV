@@ -9,6 +9,10 @@ All notable public changes to BeefTV are documented in this file.
 - Added reproducible local builds, automated quality checks, and multi-architecture container publishing.
 - Standardized public artifacts, runtime identifiers, documentation, and repository links on the BeefTV name.
 
+## v1.6.6
+
+- Preserve structured provider error codes when polling Seedance tasks, so temporary route outages do not ask users to change model settings.
+
 ## v1.6.5
 
 - Preserve explicit Seedance 2.5 reference/edit/extend task intent in provider requests.
